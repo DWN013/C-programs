@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void main( int argc, char *argv[] )
+int main( int argc, char *argv[] )
 {
     //Steps to process a file
     //1. Declare a file pointer variable
@@ -64,6 +64,6 @@ void main( int argc, char *argv[] )
     fclose(fpREAD);
     fclose(fpWRITE);
 
-    return;
+    return 0;
 
 }  /* end main */
