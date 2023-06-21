@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <omp.h>
 int main() {
-    omp_set_num_threads(8);
+    //Sets 8 global threads
+    //omp_set_num_threads(8);
     #pragma omp parallel
      {
         int thread_id = omp_get_thread_num();
