@@ -32,7 +32,7 @@ int main( int argc, char *argv[] )
     }
 
     FILE *fpREAD; //reader file pointer
-    FILE *fpWRITE;
+    FILE *fpWRITE; //writer file pointer
 
     fpREAD = fopen(argv[1], "r");
     fpWRITE = fopen(argv[2], "w");
