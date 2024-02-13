@@ -75,14 +75,15 @@ int main(int argc, char *argv[])
 
         // Start execution of commands here
         else if(pid == 0){ // Children pid always == 0
+            char *tmp3 = (char*) malloc(sizeof(buffer[i]));
+            strcpy(tmp3, buffer[i]);
+            char *bufferNoWhiteSpace = strtok(tmp3, " ");
+
             char *tmp1 = (char*) malloc(sizeof(buffer[i]));
             strcpy(tmp1, buffer[i]);
             char *tmp2 = " ";
             strcat(tmp2, tmp1);
-            char *tmp3 = (char*) malloc(sizeof(buffer[i]));
-            strcpy(tmp3, buffer[i]);
 
-            char *bufferNoWhiteSpace = strtok(tmp3, " ");
             //strcat(bufferNoWhiteSpace, tmp2);
             close(pipefd[0]); // Close reading end of pipe
             // Get result of command
