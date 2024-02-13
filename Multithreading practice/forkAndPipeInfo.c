@@ -23,12 +23,21 @@ $./Assignment_1 sample_in.txt
 #include <sys/wait.h>
 
 #define MAX_STRING_LEN 100
+#define MAX_COMMAND_AMNT 500
 
     // Output function that takes a command string and outputs an output string
     void writeOutput(char* command, char* output)
     {
         printf("The output of: %s : is\n", command);
         printf(">>>>>>>>>>>>>>>\n%s<<<<<<<<<<<<<<<\n", output);
+    }
+    void stripLineEndings(char *str) {
+        int len = strlen(str);
+        for (int i = 0; i < len; i++) {
+            if (str[i] == '\n' || str[i] == '\r') {
+                str[i] = '\0';
+            }
+        }
     }
     // Execute another program in C
     int execFile(int argc, char* argv[])
@@ -38,7 +47,7 @@ $./Assignment_1 sample_in.txt
 
 int main(int argc, char *argv[])
 {
-    char buffer [500][MAX_STRING_LEN]; // 2D array to store the commands give in the file (up to 100)
+    char buffer [MAX_COMMAND_AMNT][MAX_STRING_LEN]; // 2D array to store the commands give in the file (up to 100)
 
     FILE *fpREAD; //reader file pointer
     fpREAD = fopen(argv[1], "r");
@@ -53,12 +62,10 @@ int main(int argc, char *argv[])
         cmndAmntCntr++;
     }
 
-    // Close the reader afer finished reading the file
-    fclose(fpREAD);
-
+    fclose(fpREAD); // Close the reader afer finished reading the file
 
     // --------------------------------------------------
-    for(int i = 0; i < cmndAmntCntr; i++){
+    for(int i = 0; i < (cmndAmntCntr-1); i++){
         int pipefd[2]; // Sets up pipe id size (for 2 items)
         // pipe(fd) creates an anon./unnamed pipe and assigns the file descriptors for the read and write ends of the pipe to the elements of the fd (file descriptor) array
         if (pipe(pipefd) == -1){ // If creation of pipe not successful it returns -1
@@ -73,15 +80,31 @@ int main(int argc, char *argv[])
         else if(pid == 0){ // Children pid always == 0
             close(pipefd[0]); // Close reading end of pipe
             // Get result of command
-            printf("Child = %d\n", i);
+            // Direct stdout to write end of pipe (used to be 1 instead of STDOUT_FILENO)
+            dup2(pipefd[1], STDOUT_FILENO);
+            //write(pipefd[1], "Child", 5);
+            close(pipefd[1]); // Close writing pipe
+            close(pipefd[1]);
+            stripLineEndings(buffer[i]);
+            execlp(buffer[i], buffer[i], NULL);
+            perror("Exec failed");
             return 0;
         }
         else{ // Parent
             close(pipefd[1]); // Close writing end of pipe
             waitpid(pid, NULL, 0); // Wait for child to finish
             // Read output of command to screen using given function
-            int j = i * 2;
-            printf("Parent = %d\n", j);
+            //read(pipefd[0], buffer[i], sizeof(buffer[i]));
+            //char* temp = "none\n";
+
+            char output[MAX_STRING_LEN];
+            int bytes_read = read(pipefd[0], output, MAX_STRING_LEN);
+            output[bytes_read] = '\0';
+
+            stripLineEndings(buffer[i]);
+            writeOutput(buffer[i], output);
+            //printf("%s\n", buffer[i]);
+            // execvp(args[0], args);
         }
     }
     return 0;
