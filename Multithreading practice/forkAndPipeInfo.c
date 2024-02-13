@@ -15,10 +15,12 @@ $./Assignment_1 sample_in.txt
 */
 
 // Alexander Ukhin, 217946807
+// Call the program by ./a.out sample_in.txt
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 #define MAX_STRING_LEN 100
 
@@ -31,19 +33,12 @@ $./Assignment_1 sample_in.txt
     // Execute another program in C
     int execFile(int argc, char* argv[])
     {
-        //exec();
+        //execvp();
     }
 
 int main(int argc, char *argv[])
 {
-    //2D array to store the commands give in the file (up to 100)
-    char buffer [500][MAX_STRING_LEN];
-    //Process ID
-    int pid;
-    int fd[2];
-    if (pipe(fd) == -1){
-        return 1;
-    }
+    char buffer [500][MAX_STRING_LEN]; // 2D array to store the commands give in the file (up to 100)
 
     FILE *fpREAD; //reader file pointer
     fpREAD = fopen(argv[1], "r");
@@ -52,8 +47,7 @@ int main(int argc, char *argv[])
             return 1;
     }
 
-    //Total commands written to the array
-    int cmndAmntCntr = 0;
+    int cmndAmntCntr = 0; //Total commands written to the array
     while (!feof(fpREAD)){
         fgets(buffer[cmndAmntCntr], MAX_STRING_LEN, fpREAD);
         cmndAmntCntr++;
@@ -62,16 +56,33 @@ int main(int argc, char *argv[])
     // Close the reader afer finished reading the file
     fclose(fpREAD);
 
+
     // --------------------------------------------------
     for(int i = 0; i < cmndAmntCntr; i++){
+        int pipefd[2]; // Sets up pipe id size (for 2 items)
+        // pipe(fd) creates an anon./unnamed pipe and assigns the file descriptors for the read and write ends of the pipe to the elements of the fd (file descriptor) array
+        if (pipe(pipefd) == -1){ // If creation of pipe not successful it returns -1
+            return 1;
+        }
+
+        int pid = fork(); // Process ID
         // Create child process
-        pid = fork();
+        if (pid < 0) {return 1;} // Return 1 if pipe not created
+
         // Start execution of commands here
-
-
-
-
-
+        else if(pid == 0){ // Children pid always == 0
+            close(pipefd[0]); // Close reading end of pipe
+            // Get result of command
+            printf("Child = %d\n", i);
+            return 0;
+        }
+        else{ // Parent
+            close(pipefd[1]); // Close writing end of pipe
+            waitpid(pid, NULL, 0); // Wait for child to finish
+            // Read output of command to screen using given function
+            int j = i * 2;
+            printf("Parent = %d\n", j);
+        }
     }
     return 0;
 }
