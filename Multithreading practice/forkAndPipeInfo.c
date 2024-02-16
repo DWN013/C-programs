@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     if(fpREAD == NULL){ printf("Can't open file %s for reading.\n", argv[1]); return 1;}
 
     int cmndAmntCntr = 0; //Total commands written to the array
-    while (!feof(fpREAD)){
+    while (!feof(fpREAD) && cmndAmntCntr < MAX_COMMAND_AMNT){
         fgets(buffer[cmndAmntCntr], MAX_STRING_LEN, fpREAD);
         cmndAmntCntr++;
     }
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
             waitpid(pid, NULL, 0); // Wait for child to finish
             close(pipefd[1]); // Close writing end of pipe
 
-            int outputStrLen = 999999;
+            int outputStrLen = 1000000;
             char output[outputStrLen];
             int bytes_read = read(pipefd[0], output, outputStrLen);
             output[bytes_read] = '\0';
