@@ -1,11 +1,3 @@
-// Alexander Ukhin, 217946807
-
-// DON'T FORGET TO ADD .TXT TO END OF FILENAME
-
-// Literally all thats being done is:
-// 1. First thread needs to execture critical section, this decides the sequence in future
-// 2. Needs to alternate between odd and even / even odd
-
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,6 +40,7 @@ int getEndDigit(char* tid) {
 // Global variables
 sem_t criticalSection;  // Semaphore to control access to critical section
 sem_t idSemaphore;      // Semaphore to enforce alternating thread IDs
+sem_t idSemaphore2;      // Semaphore to enforce alternating thread IDs
 int oddTurn = 0;        // Indicates whether it's an odd or even turn for threads
 int first_thread_boolean = 1;   // Flag to indicate first thread being run
 int even_count = 0; // Count of threads with even IDs
@@ -75,6 +68,7 @@ int main(int argc, char *argv[])
 	// We have multiple threads so pass in 0 for second argument, 1 for third arg.; Amount of threads running at a time.
     sem_init(&criticalSection, 0, 1);  // Initialize critical section semaphore [MUTEX]
     sem_init(&idSemaphore, 0, 0);      // Initialize ID semaphore, enforces alternating order of thread [ALTERNATE]
+    sem_init(&idSemaphore2, 0, 0);      // Initialize ID semaphore, enforces alternating order of thread [ALTERNATE]
 
     qsort(threads, threadCount, sizeof(Thread), compareThreads); //Sort the threads based on start times
 
@@ -101,7 +95,6 @@ int main(int argc, char *argv[])
         long startTime = threads[i].startTime;
         long currentTime = getCurrentTime();
         long sleepTime = startTime - currentTime;
-        //sleep(threads[i].startTime);  // Sleep until thread's start time, usleep - microseconds, sleep - seconds
         if (sleepTime > 0) { sleep(sleepTime);  // Convert milliseconds to seconds
         }
         // 1st arg: &threads[i].handle specifies address of handle member of i'th thread in threads array
@@ -117,7 +110,7 @@ int main(int argc, char *argv[])
     sem_destroy(&criticalSection);
     sem_destroy(&idSemaphore);
     free(threads);
-    //write some suitable code here to initiate, progress and terminate the threads following the requirements
+
 	return threadCount;
 }
 
@@ -196,97 +189,55 @@ void logFinish(char* tID)
 	printf("[%ld] Thread with ID %s is finished.\n", getCurrentTime(), tID);
 }
 
-    // MUTEX == criticalSection
-    // alternate == idSemaphore
 void* threadRun(void* t)//implement this function in a suitable way
 {   Thread* thread = (Thread*)t;
 	logStart(thread->tid);
 
 	//Entry section
-    sem_wait(&criticalSection);  // Wait for turn based on ID
-
-    //if((odd_count > 0 && even_count > 0)){ sem_post(&criticalSection); }
-
-    /*
-    // Ensures last digit has different parity compared to last digit encountered
-    if((getEndDigit(thread->tid) % 2) != (oddTurn % 2) || (oddTurn % 2 == 0 && getEndDigit(thread->tid) % 2 == 0)){
-        // Release mutex if the current thread's 'y' differs from the last thread's 'y'
-        sem_post(&criticalSection);
-    }
-    else {
-        // If 'y' is the same, release criticalSection and wait on idSemaphore
-        sem_post(&criticalSection);
-        sem_wait(&idSemaphore);
-        sem_wait(&criticalSection);
-    } */
-
-
-
     // Set boolean flag to indicate that first thread has run (1 == true, 0 == false)
-    if (first_thread_boolean) { first_thread_boolean = 0; }
+    if (first_thread_boolean) { first_thread_boolean = 0;}
 
     else if (even_count > 0 && odd_count > 0){
         //while ((getEndDigit(thread->tid) % 2) == (oddTurn % 2) || (odd_count == 0 && even_count > 0) || (even_count == 0 && odd_count > 0)) {
         //while (getEndDigit(thread->tid) % 2 == oddTurn % 2 || (oddTurn != -1 && ((oddTurn % 2 == 0 && even_count > 0) || (oddTurn % 2 == 1 && odd_count > 0)))){
 
-        while ((getEndDigit(thread->tid) % 2) == (oddTurn % 2)) {
-            //int oddTurn = (oddTurn + 1) % 2;
-            sem_post(&criticalSection); // Release criticalSection
-            //sem_wait(&idSemaphore); // Wait for permission based on the alternating order
-            sem_wait(&criticalSection); // Re-acquire criticalSection to re-check the condition
-
-            /*
-            if ((odd_count == 0 && even_count > 0) || (even_count == 0 && odd_count > 0)){
-                //sem_post(&criticalSection); // Release criticalSection
-                //sem_post(&idSemaphore);
-                break;
-            }
-            */
-
-            //if ((odd_count > 0 && even_count > 0) || (odd_count == 0 && even_count == 0)) {
-            //    break; // Break out of the loop if there are no threads of the opposite parity left or no threads left at all
-            //}
-            //if ((odd_count == 0 && even_count > 0) || (even_count == 0 && odd_count > 0)) {
-            //        break; // Break out of the loop if there are no threads of the opposite parity left or no threads left at all
-            //}
-        }
+        //printf("%s is now waiting\n", thread->tid);
+        if ((getEndDigit(thread->tid) % 2) == 0) {
+                sem_wait(&idSemaphore); // Wait for permission based on the alternating order
+        } else {
+        sem_wait(&idSemaphore2); // Wait for permission based on the alternating order
+                    }
     }
 
-    /*
-    // If all threads have the same parity, release the mutex and exit the loop
-    if (((oddTurn == 0 && even_count == 0 && odd_count > 0) || (oddTurn == 1 && odd_count == 0 && even_count > 0))) {
-        sem_post(&criticalSection);
-        logFinish(thread->tid);
-        //break;
-        //return NULL;
-    }
-    */
-
+    sem_wait(&criticalSection);  // Wait for turn based on ID
     // Critical section starts here
     printf("[%ld] Thread %s is in its critical section\n", getCurrentTime(), thread->tid);
     // Critical section ends here
+
+    sem_post(&criticalSection); // Release criticalSection
 
     // Update count
     if ((getEndDigit(thread->tid) % 2) == 0){ even_count--; }
     else { odd_count--; }
 
+    if((getEndDigit(thread->tid) % 2) == 0){ sem_post(&idSemaphore2); }
+    else { sem_post(&idSemaphore); }
+
+
+
+    if(even_count <= 0 || odd_count <= 0){
+        if((getEndDigit(thread->tid) % 2) == 0){ sem_post(&idSemaphore2); }
+        else { sem_post(&idSemaphore); }
+    }
+
+    //printf("Odd count: %d \n Even count: %d \n", odd_count, even_count);
+
     // Update oddTurn with the last digit of the current thread's ID
     oddTurn = getEndDigit(thread->tid);
-    //printf("Odd count: %d \n Even count: %d \n", odd_count, even_count);
-
 
     // Exit section
-    sem_post(&criticalSection); // Release criticalSection
-    sem_post(&idSemaphore); // Signal alternate to allow the next thread
+    // sem_post(&idSemaphore); // Signal alternate to allow the next thread
     logFinish(thread->tid);
-
-    //printf("Odd count: %d \n Even count: %d \n", odd_count, even_count);
-    //if ((even_count == 1 && odd_count == 0) || (even_count == 0 && odd_count == 1)){
-        //sem_post(&criticalSection); // Release criticalSection
-        //sem_post(&idSemaphore);
-        //printf("[%ld] Thread %s is in its critical section\n", getCurrentTime(), thread->tid);
-        //logFinish(thread->tid);
-    //}
 
 	return NULL;
 }
